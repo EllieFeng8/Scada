@@ -1,0 +1,22 @@
+*.user*
+
+*.autosave
+
+*.db-shm
+
+*.db-wal
+
+*.bak
+
+*.~*
+
+build*/
+# Local build output and editor settings
+cmake-build*/
+.idea/
+*.log
+*.qmlproject.qtds*
+.env
+.env.*
+!.env.example
+

@@ -1,0 +1,9 @@
+[submodule "App/qtmqttmanager"]
+	path = App/qtmqttmanager
+	url = git@git.qt.io:sales-engineers/qtmqttmanager.git
+[submodule "adaptation/triton/common"]
+	path = App/adaptation/triton/common
+	url = https://github.com/triton-inference-server/common.git
+[submodule "adaptation/triton/clientlib"]
+	path = App/adaptation/triton/clientlib
+	url = https://github.com/triton-inference-server/client.git

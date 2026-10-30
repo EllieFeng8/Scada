@@ -1,0 +1,33 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "clion-msvc-debug",
+      "displayName": "Qt 6.8.3 MSVC Debug (short path)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../b-msvc",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_PREFIX_PATH": "C:/Qt/6.8.3/msvc2022_64",
+        "LINK_INSIGHT": "OFF"
+      },
+      "environment": {
+        "PATH": "C:/Qt/6.8.3/msvc2022_64/bin;$penv{PATH}",
+        "QT_PLUGIN_PATH": "C:/Qt/6.8.3/msvc2022_64/plugins",
+        "QML_IMPORT_PATH": "${sourceDir}/../b-msvc/qml;C:/Qt/6.8.3/msvc2022_64/qml"
+      },
+      "vendor": {
+        "jetbrains.com/clion": {
+          "toolchain": "Visual Studio"
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "clion-msvc-debug",
+      "configurePreset": "clion-msvc-debug",
+      "jobs": 6
+    }
+  ]
+}
