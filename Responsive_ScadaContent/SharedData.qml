@@ -15,6 +15,25 @@ QtObject {
     property list<int> environment: [DataModel.environmentValue, DataModel.environmentValueChange, DataModel.environmentSlider]
     property bool connected: DataModel.connected
 
+    // Built-in demonstration scenarios, mapped to existing 3D camera targets.
+    readonly property var equipmentAlarms: [
+        { equipment: "Line 1 Printers", stateName: "Line1Printers_state", severity: 4,
+          title: "Line 01: Critical Error",
+          message: "An unexpected fault has occurred in the system. Please discontinue operations, isolate the affected area, and notify the maintenance team to perform a thorough inspection and resolution of the issue." },
+        { equipment: "Line 2 Mill · SP-L15", stateName: "line2Mill", severity: 3,
+          title: "Machinery malfunction SP-L15",
+          message: "Machinery malfunction detected. Cease operations and contact technical support immediately." },
+        { equipment: "Line 4 Welding", stateName: "Line4Welding", severity: 3,
+          title: "Unauthorized Access",
+          message: "Personnel detected in a restricted area that is dangerous and not safe for human presence. Please inform on-site personnel of this issue." }
+    ]
+
+    function alarmForState(stateName) {
+        for (var i = 0; i < equipmentAlarms.length; ++i)
+            if (equipmentAlarms[i].stateName === stateName) return equipmentAlarms[i]
+        return null
+    }
+
     property string workOrderBaseUrl: "http://localhost:8080/api"
     property int assignmentId: 1
     property var assignment: null

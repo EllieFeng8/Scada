@@ -48,6 +48,12 @@ ScrollView{
         Repeater {
             model: listmodel
             delegate: Widget_Main {
+                // Preserve the two cards' layout slots so other cards do not move
+                // underneath the equipment alarm panel.
+                readonly property bool hiddenByAlarm: factoryScene.alarmDetailsVisible
+                    && (wtitle === "Machine Efficiency" || wtitle === "Air Quality Index")
+                opacity: hiddenByAlarm ? 0 : 1
+                enabled: !hiddenByAlarm
                 widgetType: wtype
                 statecontroller: wstate
                 iconPath: wicon

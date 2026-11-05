@@ -6,13 +6,16 @@ Item {
     property string name: "Line 1"
     property bool visibility: true
     property string stateName: "Line1CamState"
+    readonly property var alarm: SharedData.alarmForState(stateName)
+    readonly property bool hasAlarm: alarm !== null
+    readonly property color statusColor: hasAlarm ? (alarm.severity === 4 ? "#ff4154" : "#f3af3d") : "#23b26a"
     property vector3d trackedWorldPosition: line1Pos.scenePosition
     property int visiblityDistance: 5000
     property bool maximized: false
     property real distance: 500
     width: nameText.implicitWidth+65
     //scale: distance > visiblityDistance? 1 : distance / visiblityDistance
-    onDistanceChanged: maximized? scale = 1 : scale = 1- (1-0)/(3000-1)*(clickableTitle.distance-clickableTitle.visiblityDistance-1)+0
+    onDistanceChanged: scale = hasAlarm || maximized ? 1 : Math.max(0.35, 1- (1-0)/(3000-1)*(clickableTitle.distance-clickableTitle.visiblityDistance-1))
     onVisibilityChanged: visibility? opacityOff.running = true : opacityOn.running = true
 
 
@@ -40,8 +43,9 @@ Item {
         const scenePosition = sceneCamera.mapToViewport(trackedWorldPosition)
         clickableTitle.x = scenePosition.x * factory.width
         clickableTitle.y = scenePosition.y * factory.height
-        clickableTitle.z = scenePosition.z
-        clickableTitle.maximized = scenePosition.z > visiblityDistance? false : true
+        clickableTitle.z = hasAlarm ? 20 : 1
+        clickableTitle.visible = scenePosition.z > 0
+        clickableTitle.maximized = hasAlarm || scenePosition.z <= visiblityDistance
         clickableTitle.distance = scenePosition.z
 
     }
@@ -60,6 +64,8 @@ Item {
         color: master.__panelBackground_C
         //color: "white"
         radius: 15
+        border.width: clickableTitle.hasAlarm ? 2 : 0
+        border.color: clickableTitle.statusColor
     }
 
     Connections {
@@ -90,7 +96,7 @@ Item {
         height: 34
         color: master.__font_C
         //color: "black"
-        text: parent.name
+        text: clickableTitle.hasAlarm ? parent.name + (clickableTitle.alarm.severity === 4 ? " · 嚴重" : " · 警告") : parent.name
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         font.family: "Hubot-Sans SemiBold"
@@ -104,7 +110,7 @@ Item {
         y: 8
         width: 24
         height: 24
-        color: "#23b26a"
+        color: clickableTitle.statusColor
         radius: 6
     }
 
@@ -113,7 +119,8 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         enabled: clickableTitle.opacity
-        onClicked: factory.state = clickableTitle.stateName
+        cursorShape: Qt.PointingHandCursor
+        onClicked: factory.focusEquipment(clickableTitle.stateName)
         onEntered:clickableTitle.z+=3
         onExited: clickableTitle.z-=3
     }
@@ -123,7 +130,22 @@ Item {
         x: 13
         y: 12
         source: "GearIcon/assets/icon_size_16.svg"
+        visible: !clickableTitle.hasAlarm
         fillMode: Image.PreserveAspectFit
+    }
+
+    Text {
+        x: 8
+        y: 8
+        width: 24
+        height: 24
+        text: "!"
+        visible: clickableTitle.hasAlarm
+        color: "#181818"
+        font.bold: true
+        font.pixelSize: 20
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
     }
 
     states: [

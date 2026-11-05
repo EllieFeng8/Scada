@@ -89,6 +89,36 @@ Rectangle {
     property list<int> distanceLOD:  [1500]
     property bool themeToggle: master.__daymode
     property real resetbuttonPos: 1010
+    property string selectedAlarmState: ""
+    readonly property var selectedAlarm: SharedData.alarmForState(selectedAlarmState)
+    readonly property bool alarmDetailsVisible: equipmentAlarmPanel.visible
+
+    function focusEquipment(stateName) {
+        resetCameraAnimation.stop()
+        startCameraAnim.stop()
+        factory.state = stateName
+        selectedAlarmState = SharedData.alarmForState(stateName) ? stateName : ""
+    }
+
+    onStateChanged: {
+        if (state !== selectedAlarmState) selectedAlarmState = ""
+    }
+
+    function enableEquipmentPicking(node) {
+        if (node instanceof Model) node.pickable = true
+        for (var i = 0; i < node.children.length; ++i)
+            enableEquipmentPicking(node.children[i])
+    }
+
+    function equipmentState(node) {
+        while (node) {
+            if (node === printer3DLOD) return "Line1Printers_state"
+            if (node === mill_LOD) return "line2Mill"
+            if (node === weldingMachineLOD) return "Line4Welding"
+            node = node.parent
+        }
+        return ""
+    }
 
     // property color darkColor: "#343a40"
     // property color darkColorFloor: "#212529"
@@ -101,6 +131,7 @@ Rectangle {
     Component.onCompleted: {
         WorkshopInstance.workshopImportScene = scene
         WorkshopInstance.workshopEnvironment = sceneEnvironment
+        enableEquipmentPicking(scene)
     }
 
     /*gradient: Gradient {
@@ -170,6 +201,19 @@ Rectangle {
 
         Node {
             id: scene
+
+            PrincipledMaterial {
+                id: criticalEquipmentMaterial
+                baseColor: "#ff4154"
+                emissiveFactor: Qt.vector3d(0.25, 0.02, 0.03)
+                roughness: 0.45
+            }
+            PrincipledMaterial {
+                id: warningEquipmentMaterial
+                baseColor: "#f3af3d"
+                emissiveFactor: Qt.vector3d(0.15, 0.08, 0.01)
+                roughness: 0.45
+            }
 
 
             /*NOT FOR DS:*/PhysicsMaterial {
@@ -1510,7 +1554,7 @@ Rectangle {
                 y: 0
                 visible: true
                 z: 576.14032
-                weldingBasicMaterial: basicWhite
+                weldingBasicMaterial: warningEquipmentMaterial
                 weldingBeltMaterial: belt
             }
 
@@ -1561,7 +1605,7 @@ Rectangle {
                 y: -0
                 visible: true
                 z: 1085.83594
-                millBasicMaterial: basicWhite
+                millBasicMaterial: warningEquipmentMaterial
                 isPaused: !isRunning
             }
 
@@ -1634,7 +1678,7 @@ Rectangle {
                 y: -0
                 visible: true
                 z: 1125.91711
-                printerBasicWhite:basicWhite
+                printerBasicWhite: criticalEquipmentMaterial
             }
 
             Node {
@@ -3818,9 +3862,91 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
+        onClicked: (mouse) => {
+            var hit = view3D.pick(mouse.x, mouse.y)
+            var stateName = factory.equipmentState(hit.objectHit)
+            if (stateName) factory.focusEquipment(stateName)
+            else factory.selectedAlarmState = ""
+        }
         onWheel: (wheel) => {
                      pinchHandler.zoom(wheel.angleDelta.y)
                  }
+    }
+
+    Rectangle {
+        id: equipmentAlarmPanel
+        objectName: "equipmentAlarmPanel"
+        parent: root
+        z: 100
+        visible: views.activeView === 2 && factory.selectedAlarm !== null && !header.notifications
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: 24
+        anchors.topMargin: Math.min(170, parent.height * 0.22)
+        width: Math.min(440, parent.width - 48)
+        height: Math.min(alarmContent.implicitHeight + 40, parent.height - y - 24)
+        radius: 16
+        color: master.__panelBackground_C
+        border.width: 2
+        border.color: factory.selectedAlarm && factory.selectedAlarm.severity === 4 ? "#ff4154" : "#f3af3d"
+
+        MouseArea { anchors.fill: parent; onWheel: (wheel) => { wheel.accepted = true } }
+        ScrollView {
+            anchors.fill: parent
+            anchors.margins: 20
+            contentWidth: availableWidth
+            clip: true
+            Column {
+                id: alarmContent
+                width: parent.width
+                spacing: 16
+                Text {
+                    width: parent.width
+                    text: factory.selectedAlarm && factory.selectedAlarm.severity === 4 ? "● 嚴重異常 · 示範告警" : "● 警告 · 示範告警"
+                    color: equipmentAlarmPanel.border.color
+                    font.pixelSize: 18
+                    font.bold: true
+                    wrapMode: Text.WordWrap
+                }
+                Text {
+                    width: parent.width
+                    text: factory.selectedAlarm ? factory.selectedAlarm.equipment : ""
+                    color: master.__font_C
+                    font.pixelSize: 24
+                    font.bold: true
+                    wrapMode: Text.WordWrap
+                }
+                Text {
+                    width: parent.width
+                    text: factory.selectedAlarm ? factory.selectedAlarm.title : ""
+                    color: master.__font_C
+                    font.pixelSize: 20
+                    wrapMode: Text.WordWrap
+                }
+                Text {
+                    width: parent.width
+                    text: factory.selectedAlarm ? factory.selectedAlarm.message : ""
+                    color: master.__font_C
+                    font.pixelSize: 17
+                    lineHeight: 1.25
+                    wrapMode: Text.WordWrap
+                }
+                Button {
+                    width: parent.width
+                    text: "返回工廠總覽"
+                    onClicked: {
+                        factory.selectedAlarmState = ""
+                        factory.state = "Base State"
+                        resetCameraAnimation.restart()
+                    }
+                }
+                Button {
+                    width: parent.width
+                    text: "關閉內容"
+                    onClicked: factory.selectedAlarmState = ""
+                }
+            }
+        }
     }
 
     ClickableTitle {

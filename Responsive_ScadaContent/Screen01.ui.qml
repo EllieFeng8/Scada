@@ -65,6 +65,7 @@ Rectangle {
             visible: views.activeView == 2
             anchors.fill: parent
             Factory_3D {
+                id: factoryScene
                 anchors.fill: parent
             }
         }
@@ -366,9 +367,9 @@ Rectangle {
             Rectangle {
                 id: topbanner
                 height: 60
-                color: "#3f56e59d"
+                color: master.__panelBackground_C
                 radius: 16
-                border.color: "#23b26a"
+                border.color: "#ff4154"
                 border.width: 4
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -381,7 +382,7 @@ Rectangle {
                     id: rectangle1
                     width: 24
                     height: 25
-                    color: "#23b26a"
+                    color: "#ff4154"
                     radius: 6
                     anchors.left: parent.left
                     anchors.top: parent.top
@@ -391,7 +392,7 @@ Rectangle {
                     Image {
                         id: check
                         anchors.verticalCenter: parent.verticalCenter
-                        source: "images/check.png"
+                        source: "images/alert.png"
                         mipmap: false
                         smooth: true
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -405,7 +406,10 @@ Rectangle {
                     anchors.top: parent.top
 
                     color: root.textColor
-                    text: qsTr("All systems operational")
+                    text: qsTr("%1 項設備異常 · 示範告警 · 點擊 3D 設備查看").arg(SharedData.equipmentAlarms.length)
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    elide: Text.ElideRight
                     font.pixelSize: 24
                     font.styleName: "SemiBold"
                     font.family: "Hubot Sans"

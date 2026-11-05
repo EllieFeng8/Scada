@@ -61,17 +61,17 @@ Rectangle {
         anchors.topMargin: 224
         spacing: 32
         Notification {
-            title: "All systems operational"
-            message: "Equipment is operating within parameters, the and project is on schedule and on budget."
-            severity: 1
+            title: "3 active equipment alarms · Demo"
+            message: "Select a marked device in the 3D factory to inspect its alarm."
+            severity: 3
             sizeState: 2
-            iconState: 1
+            iconState: 2
             width: notificationBox.notificationWidth
         }
 
         Notification {
-            title: "Line 01: Critical Error"
-            message: "An unexpected fault has occurred in the system. Please discontinue operations, isolate the affected area, and notify the maintenance team to perform a thorough inspection and resolution of the issue."
+            title: SharedData.equipmentAlarms[0].title
+            message: SharedData.equipmentAlarms[0].message
             severity: 4
             sizeState: 2
             iconState: 3
@@ -92,8 +92,8 @@ Rectangle {
         }
 
         Notification {
-            title: "Machinery malfunction SP-L15"
-            message: "Machinery malfunction detected. Cease operations and contact technical support immediately."
+            title: SharedData.equipmentAlarms[1].title
+            message: SharedData.equipmentAlarms[1].message
             severity: 3
             sizeState: 1
             iconState: 2
@@ -108,8 +108,8 @@ Rectangle {
         }
 
         Notification {
-            title: "Unautherized Access"
-            message: "Personel detected in a restricted area that is dangerous and not safe for human presence. Please inform any on-site personal of this issue."
+            title: SharedData.equipmentAlarms[2].title
+            message: SharedData.equipmentAlarms[2].message
             severity: 3
             sizeState: 2
             iconState: 2

@@ -1,5 +1,11 @@
 # Windows 本機展示
 
+## 3D 設備告警展示
+
+工廠總覽會以紅色標示 Line 1 Printers 嚴重異常，黃色標示 Line 2 Mill 機台故障及 Line 4 Welding 限制區域告警。點擊設備模型或警告標籤，鏡頭會移至該設備並在右側顯示告警內容；可按「返回工廠總覽」復原視角，或「關閉內容」保留近景。
+
+告警為內建固定示範資料，定義於 `Responsive_ScadaContent/SharedData.qml` 的 `equipmentAlarms`，與通知面板共用內容，尚未接入真實 MQTT 告警。設備及區域對應為本機示範配置。
+
 ## CLion 編譯（Visual Studio）
 
 以 CLion 開啟本資料夾，重新載入 CMake，選擇 `clion-msvc-debug` 預設與 `Responsive_ScadaApp` 目標後 Build。此預設使用既有的 `Visual Studio` toolchain 和 `C:/Qt/6.8.3/msvc2022_64`，並提供 Qt 執行環境。
