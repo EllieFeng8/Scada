@@ -9,7 +9,7 @@ Window {
     height: 1080
 
     visible: true
-    title: "ResizeableWidgets"
+    title: "AEYEOT SCADA 3D"
     //visibility: Window.FullScreen
 
     Screen01 {

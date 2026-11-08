@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
 #include <QApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QCommandLineParser>
 #include <QRandomGenerator>
@@ -15,6 +16,7 @@ int main(int argc, char *argv[])
 {
     set_qt_environment();
     QApplication app(argc, argv);
+    app.setWindowIcon(QIcon(QStringLiteral(":/icons/app_icon.png")));
     QCommandLineParser parser;
     parser.setApplicationDescription(QCoreApplication::translate("main", "QtMqttManager test application"));
     parser.addHelpOption();

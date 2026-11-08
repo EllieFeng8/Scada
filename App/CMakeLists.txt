@@ -2,6 +2,19 @@ target_sources(${CMAKE_PROJECT_NAME} PUBLIC
     "main.cpp"
 )
 
+# Application / window icon (the gold logo), shown in the taskbar, title bar and Explorer.
+# Embed a PNG into Qt resources for the runtime window icon (QGuiApplication::setWindowIcon).
+qt_add_resources(${CMAKE_PROJECT_NAME} "appicon"
+    PREFIX "/"
+    FILES
+        icons/app_icon.png)
+
+# Embed a multi-resolution .ico into the Windows executable (Explorer / pinned taskbar icon).
+if (WIN32)
+    enable_language(RC)
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE app_icon.rc)
+endif()
+
 # NOTE: App/qtmqttmanager is normally a git submodule
 # (git@git.qt.io:sales-engineers/qtmqttmanager.git) but is empty in this
 # checkout (extracted from a zip, not cloned). App/qtmqttmanager/CMakeLists.txt

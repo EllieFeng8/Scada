@@ -1,0 +1,3 @@
+// Windows executable icon for Responsive_ScadaApp.
+// IDI_ICON1 (lowest id) becomes the application/Explorer/taskbar icon.
+IDI_ICON1 ICON "icons/app.ico"
