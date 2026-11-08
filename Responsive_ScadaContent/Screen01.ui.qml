@@ -64,9 +64,59 @@ Rectangle {
             id: factory3dview
             visible: views.activeView == 2
             anchors.fill: parent
-            Factory_3D {
-                id: factoryScene
+
+            // Load the heavy Quick3D scene asynchronously so the window paints
+            // its first frame immediately instead of blocking white on startup.
+            Loader {
+                id: factoryLoader
                 anchors.fill: parent
+                asynchronous: true
+                sourceComponent: factorySceneComponent
+            }
+
+            Component {
+                id: factorySceneComponent
+                Factory_3D {
+                    id: factoryScene
+                    anchors.fill: parent
+                }
+            }
+
+            // Loading screen shown until the 3D scene is ready, then fades out.
+            Rectangle {
+                id: factoryLoadingOverlay
+                anchors.fill: parent
+                color: "#07111f"
+                visible: opacity > 0
+                opacity: factoryLoader.status === Loader.Ready ? 0 : 1
+                Behavior on opacity {
+                    NumberAnimation { duration: 450; easing.type: Easing.OutCubic }
+                }
+
+                // Animated GLSL loader background.
+                ShaderAnimation {
+                    anchors.fill: parent
+                    cornerRadius: 0
+                }
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "AEYEOT SCADA 3D"
+                        color: "white"
+                        font.pixelSize: 30
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: qsTr("載入 3D 工廠場景…")
+                        color: "#cbd5e1"
+                        font.pixelSize: 14
+                    }
+                }
             }
         }
     }

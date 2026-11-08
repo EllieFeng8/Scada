@@ -589,6 +589,7 @@ qt6_add_qml_module(Responsive_ScadaContent
         ${DATAUTILS_QML_FILES}
         "App.qml"
         "test.qml"
+        "ShaderAnimation.qml"
         "Screen01.ui.qml"
         "Header.qml"
         "StateMaster.qml"
@@ -754,6 +755,20 @@ qt6_add_resources(Responsive_ScadaContent Responsive_ScadaContentBigResource
     BIG_RESOURCES
     PREFIX "/qt/qml/Responsive_ScadaContent"
     VERSION 1.0
-    FILES 
+    FILES
         "images/untitled.hdr"
+)
+
+# Loading-screen background shader (used by ShaderAnimation.qml).
+# Compiled to qrc:/shaders/shader-animation.frag.qsb
+find_package(Qt6 COMPONENTS ShaderTools)
+qt6_add_shaders(Responsive_ScadaContent "scada_loader_shaders"
+    PRECOMPILE
+    OPTIMIZED
+    PREFIX
+        "/shaders"
+    BASE
+        "shaders"
+    FILES
+        "shaders/shader-animation.frag"
 )

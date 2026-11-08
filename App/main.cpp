@@ -115,5 +115,10 @@ int main(int argc, char *argv[])
     if (engine.rootObjects().isEmpty())
         return -1;
 
+    // The main UI is loaded asynchronously (see App.qml), so the DataModel QML
+    // singleton may not be instantiated during load(). Force-create it here so the
+    // queued objectCreated handler above (which wires MQTT <-> DataModel) finds it.
+    engine.singletonInstance<DataModel *>("DataModel", "DataModel");
+
     return app.exec();
 }
