@@ -10,9 +10,19 @@
 
 以 CLion 開啟本資料夾，重新載入 CMake，選擇 `clion-msvc-debug` 預設與 `Responsive_ScadaApp` 目標後 Build。此預設使用既有的 `Visual Studio` toolchain 和 `C:/Qt/6.8.3/msvc2022_64`，並提供 Qt 執行環境。
 
-原有 `Debug-Visual Studio` profile 也已改用短路徑。如果 CLion 保留了舊設定，請在 Settings → Build, Execution, Deployment → CMake 將 Build directory 設為 `$PROJECT_DIR$/../b-msvc`，然後 Reload CMake Project。CMake options 為 `-G Ninja -DCMAKE_PREFIX_PATH=C:/Qt/6.8.3/msvc2022_64 -DLINK_INSIGHT=OFF`。
+如果 CLion 保留了舊設定，請在 Settings → Build, Execution, Deployment → CMake 將 Build directory 設為 `$PROJECT_DIR$/build`，然後 Reload CMake Project。CMake options 為 `-G Ninja -DCMAKE_PREFIX_PATH=C:/Qt/6.8.3/msvc2022_64 -DLINK_INSIGHT=OFF`。
 
-建置輸出為 `../b-msvc/Responsive_ScadaApp.exe`。請保留短建置路徑：原本 `cmake-build-debug-visual-studio` 使 QML cache 物件與部分 MOC 檔案的完整路徑過長，導致 MSVC C1083 / Invalid argument 與 moc 無法建立檔案。
+建置輸出為 `build/Responsive_ScadaApp.exe`（專案內，已被 `.gitignore` 忽略）。請保留短建置目錄名 `build`：原本 `cmake-build-debug-visual-studio` 使 QML cache 物件與部分 MOC 檔案的完整路徑過長，導致 MSVC C1083 / Invalid argument 與 moc 無法建立檔案；`build` 夠短（最長路徑約 196 字元，離 260 上限尚有餘裕）。
+
+### 讓 CLion ▶ Run 直接啟動
+
+CLion 產生的 Run 設定不會把 Qt 的 `bin` 加進 PATH，直接按 ▶ 會因找不到 Qt DLL 而以 `0xC0000135` 退出。建置後跑一次 `windeployqt`，把 Qt DLL 與 QML 外掛複製到 exe 同目錄即可（之後按 ▶ 不需任何環境變數設定）：
+
+```
+"C:\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe" --qmldir "%CD%" "build\Responsive_ScadaApp.exe"
+```
+
+做過一次 clean/rebuild 清掉 `build` 後，需重跑此指令。
 
 ## 啟動
 
