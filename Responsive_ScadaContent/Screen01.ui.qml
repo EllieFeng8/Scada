@@ -406,7 +406,7 @@ Rectangle {
                     anchors.top: parent.top
 
                     color: root.textColor
-                    text: qsTr("%1 項設備異常 · 示範告警 · 點擊 3D 設備查看").arg(SharedData.equipmentAlarms.length)
+                    text: qsTr("%1 項設備異常 · 即時機台狀態 · 點擊 3D 設備查看").arg(SharedData.activeAlarmCount)
                     anchors.right: parent.right
                     anchors.rightMargin: 12
                     elide: Text.ElideRight

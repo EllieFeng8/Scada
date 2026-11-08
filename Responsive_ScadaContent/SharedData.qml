@@ -15,23 +15,50 @@ QtObject {
     property list<int> environment: [DataModel.environmentValue, DataModel.environmentValueChange, DataModel.environmentSlider]
     property bool connected: DataModel.connected
 
-    // Built-in demonstration scenarios, mapped to existing 3D camera targets.
-    readonly property var equipmentAlarms: [
-        { equipment: "Line 1 Printers", stateName: "Line1Printers_state", severity: 4,
-          title: "Line 01: Critical Error",
-          message: "An unexpected fault has occurred in the system. Please discontinue operations, isolate the affected area, and notify the maintenance team to perform a thorough inspection and resolution of the issue." },
-        { equipment: "Line 2 Mill · SP-L15", stateName: "line2Mill", severity: 3,
-          title: "Machinery malfunction SP-L15",
-          message: "Machinery malfunction detected. Cease operations and contact technical support immediately." },
-        { equipment: "Line 4 Welding", stateName: "Line4Welding", severity: 3,
-          title: "Unauthorized Access",
-          message: "Personnel detected in a restricted area that is dangerous and not safe for human presence. Please inform on-site personnel of this issue." }
+    // 機台 state 名稱 ↔ MES 機台 的對應。只接現有 3D 物件，不新增機台。
+    // stage: "head" 打頭機 / "thread" 搓牙機；machineId 為 MES 機台 id。
+    // 要換成別台機台，改這裡的 machineId / stage 即可。
+    readonly property var machineStateMap: [
+        { stateName: "Line1Printers_state", equipment: "Line 1 Printers", stage: "head", machineId: 1 },
+        { stateName: "line2Mill",           equipment: "Line 2 Mill",     stage: "head", machineId: 4 },
+        { stateName: "Line4Welding",        equipment: "Line 4 Welding",  stage: "head", machineId: 9 }
     ]
 
+    // 由 MES 即時狀態填入；初始為「連線中」(視為正常，避免誤報)。每次輪詢整包重設。
+    property var equipmentAlarms: machineStateMap.map(function(m) {
+        return { equipment: m.equipment, stateName: m.stateName, machineId: m.machineId,
+                 stage: m.stage, state: -1, severity: 2,
+                 title: m.equipment + " · 連線中…", message: "尚未取得機台即時狀態。" }
+    })
+
+    // MES state：0 斷線 / 1 異常紅燈 / 2 運行綠燈 / 3 待機黃燈。
+    // severity 對應現有 3D 著色：4=紅、3=黃、2=綠(視為無告警)。
+    function stateMeta(equipment, state) {
+        switch (state) {
+        case 1:  return { severity: 4, title: equipment + " · 異常", message: "機台異常紅燈，請派員檢查處理。" }
+        case 0:  return { severity: 4, title: equipment + " · 斷線", message: "機台離線（斷線），未取得即時狀態。" }
+        case 3:  return { severity: 3, title: equipment + " · 待機", message: "機台待機中（黃燈）。" }
+        case 2:  return { severity: 2, title: equipment + " · 運行中", message: "機台自動運行中（綠燈）。" }
+        default: return { severity: 2, title: equipment + " · 無資料", message: "查無機台即時狀態資料。" }
+        }
+    }
+
+    // 只有異常(黃/紅)才回傳告警物件；運行綠燈回傳 null → 3D 顯示綠色。
     function alarmForState(stateName) {
-        for (var i = 0; i < equipmentAlarms.length; ++i)
-            if (equipmentAlarms[i].stateName === stateName) return equipmentAlarms[i]
+        for (var i = 0; i < equipmentAlarms.length; ++i) {
+            var a = equipmentAlarms[i]
+            if (a.stateName === stateName)
+                return a.severity >= 3 ? a : null
+        }
         return null
+    }
+
+    // 目前異常(黃/紅)機台數，給告警列數字用。
+    readonly property int activeAlarmCount: {
+        var n = 0
+        for (var i = 0; i < equipmentAlarms.length; ++i)
+            if (equipmentAlarms[i].severity >= 3) ++n
+        return n
     }
 
     property string workOrderBaseUrl: "http://localhost:8080/api"
@@ -91,6 +118,75 @@ QtObject {
         repeat: true
         triggeredOnStart: true
         onTriggered: shareddata.refreshAssignment()
+    }
+
+    // ── 即時機台狀態輪詢（MES REST，每 5 秒）────────────────────────
+    property bool machinePollBusy: false
+    function machineEndpoint(stage, machineId) {
+        var b = workOrderBaseUrl.replace(/\/+$/, "")
+        if (stage === "thread")
+            return b + "/threadMachineHistoryLog/getThreadMachineHistoryLogByMachine?machineId=" + machineId
+        return b + "/headMachineHistoryLog/getHeadMachineHistoryLogByMachine?machineId=" + machineId
+    }
+    function refreshMachineStates() {
+        if (machinePollBusy) return
+        machinePollBusy = true
+        machineStateTimeout.restart()
+        var map = machineStateMap
+        var results = new Array(map.length)
+        var remaining = map.length
+        function done() {
+            if (--remaining > 0) return
+            machineStateTimeout.stop()
+            machinePollBusy = false
+            var out = []
+            for (var j = 0; j < map.length; ++j) out.push(results[j])
+            shareddata.equipmentAlarms = out
+        }
+        for (var i = 0; i < map.length; ++i) {
+            (function(idx) {
+                var m = map[idx]
+                var xhr = new XMLHttpRequest()
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState !== XMLHttpRequest.DONE) return
+                    var state = -1
+                    if (xhr.status === 200) {
+                        try {
+                            var rows = JSON.parse(xhr.responseText)
+                            if (Array.isArray(rows) && rows.length > 0) {
+                                var latest = null, latestT = -Infinity
+                                for (var k = 0; k < rows.length; ++k) {
+                                    var t = Date.parse(rows[k].time)
+                                    if (isNaN(t)) t = k
+                                    if (t >= latestT) { latestT = t; latest = rows[k] }
+                                }
+                                if (latest && typeof latest.state === "number") state = latest.state
+                            }
+                        } catch (e) { state = -1 }
+                    }
+                    var meta = shareddata.stateMeta(m.equipment, state)
+                    results[idx] = { equipment: m.equipment, stateName: m.stateName,
+                                     machineId: m.machineId, stage: m.stage, state: state,
+                                     severity: meta.severity, title: meta.title, message: meta.message }
+                    done()
+                }
+                xhr.open("GET", shareddata.machineEndpoint(m.stage, m.machineId))
+                xhr.setRequestHeader("Accept", "application/json")
+                xhr.send()
+            })(i)
+        }
+    }
+    property Timer machineStateTimeout: Timer {
+        interval: 8000
+        running: false
+        onTriggered: shareddata.machinePollBusy = false   // 防止請求卡住導致不再輪詢
+    }
+    property Timer machineStateRefresh: Timer {
+        interval: 5000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: shareddata.refreshMachineStates()
     }
 
     SequentialAnimation on num {
