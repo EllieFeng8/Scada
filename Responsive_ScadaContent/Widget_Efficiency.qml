@@ -469,10 +469,11 @@ Rectangle {
             name: "state_size_M"
             when: statecontroller === 2
 
-            PropertyChanges {
-                target: efficiency3
-                visible: false
-            }
+            // id 'efficiency3' 已不存在，此 PropertyChanges 無效（載入時報錯），暫不載入
+            // PropertyChanges {
+            //     target: efficiency3
+            //     visible: false
+            // }
 
             PropertyChanges {
                 target: data10
@@ -494,11 +495,12 @@ Rectangle {
 
             }
 
-            PropertyChanges {
-                target: fillArc
-                anchors.verticalCenterOffset: 0
-                anchors.horizontalCenterOffset: 0
-            }
+            // id 'fillArc' 已不存在，此 PropertyChanges 無效（載入時報錯），暫不載入
+            // PropertyChanges {
+            //     target: fillArc
+            //     anchors.verticalCenterOffset: 0
+            //     anchors.horizontalCenterOffset: 0
+            // }
 
             PropertyChanges {
                 target: gaugearc
@@ -600,10 +602,11 @@ Rectangle {
                 visible: false
             }
 
-            PropertyChanges {
-                target: efficiency3
-                visible: true
-            }
+            // id 'efficiency3' 已不存在，此 PropertyChanges 無效（載入時報錯），暫不載入
+            // PropertyChanges {
+            //     target: efficiency3
+            //     visible: true
+            // }
 
             PropertyChanges {
                 target: data10

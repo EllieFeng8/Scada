@@ -49,29 +49,33 @@ Node {
                 recognize();
             }
         function recognize() {
-                camera.lookAt(currentItem.content)
-                WorkshopInstance.workshopCameraView.grabToImage(function(result) {
-                    var pictureNr = /*Math.random() **/ 1000000;
-                    var filename = "/tmp/pic_" + pictureNr.toString() + ".jpg"
-                    console.log("saving image to " + filename);
-                    result.saveToFile(filename);
-                    Query.text = (filename);
-                    Query.query();
-                    console.log("AI detection started")
-                });
+                // AI 視覺辨識未啟用（ENABLE_AI_ADAPTATION=OFF，Query 未註冊）。
+                // grabToImage 每個物件都會抓一次場景畫面（GPU 成本），且 Query.query()
+                // 會因 Query 未定義而丟錯，故整段暫不載入 / 不執行。
+                // camera.lookAt(currentItem.content)
+                // WorkshopInstance.workshopCameraView.grabToImage(function(result) {
+                //     var pictureNr = 1000000;
+                //     var filename = "/tmp/pic_" + pictureNr.toString() + ".jpg"
+                //     console.log("saving image to " + filename);
+                //     result.saveToFile(filename);
+                //     Query.text = (filename);
+                //     Query.query();
+                //     console.log("AI detection started")
+                // });
         }
-        Connections {
-            target: Query
-            onClassindexChanged: {
-                var isFaulty = false
-                console.log("recognition result: ", Query.possibility*100, "% class: ", Query.classindex);
-                isFaulty = ((Query.classindex % 2)==1) ? true : false;
-                WorkshopInstance.failtyPartCounter += isFaulty;
-                rootNode.currentItem.faulty = isFaulty;
-                console.log("class value = ", Query.classindex % 2);
-                console.log("isFaulty = ", isFaulty);
-            }
-        }
+        // AI 辨識結果回呼未啟用（Query 未註冊，會在載入時報 onClassindexChanged 錯誤），暫不載入。
+        // Connections {
+        //     target: Query
+        //     onClassindexChanged: {
+        //         var isFaulty = false
+        //         console.log("recognition result: ", Query.possibility*100, "% class: ", Query.classindex);
+        //         isFaulty = ((Query.classindex % 2)==1) ? true : false;
+        //         WorkshopInstance.failtyPartCounter += isFaulty;
+        //         rootNode.currentItem.faulty = isFaulty;
+        //         console.log("class value = ", Query.classindex % 2);
+        //         console.log("isFaulty = ", isFaulty);
+        //     }
+        // }
     }
 
     ItemMan {

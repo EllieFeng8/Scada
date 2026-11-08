@@ -29,7 +29,8 @@ Model {
         scale.z: 1
         scale.y: 1
         scale.x: 1
-        materials: mill_low.materials
+        // 'materials' 為 Quick3D 無 NOTIFY 的 list 屬性，綁定會報 non-NOTIFYable 警告，暫不綁定
+        // materials: mill_low.materials
     }
 
     Mill_Arm_animated_low {
@@ -40,7 +41,8 @@ Model {
         scale.z: 0.015
         scale.y: 0.015
         scale.x: 0.015
-        millArmLowMaterials: mill_low.materials
+        // 'materials' 為 Quick3D 無 NOTIFY 的 list 屬性，綁定會報 non-NOTIFYable 警告，暫不綁定
+        // millArmLowMaterials: mill_low.materials
         isPaused: mill_low.isPaused
     }
 
