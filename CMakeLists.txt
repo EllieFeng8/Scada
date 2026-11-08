@@ -27,6 +27,12 @@ qt_add_resources(${CMAKE_PROJECT_NAME} "configuration"
     FILES
         qtquickcontrols2.conf)
 
+# Release 版使用 Windows GUI 子系統（不顯示 console 視窗）；
+# Debug 仍為 console 以便檢視 qDebug log。
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
+    WIN32_EXECUTABLE $<CONFIG:Release>
+)
+
 include(qds)
 
 if (BUILD_QDS_COMPONENTS)
