@@ -60,73 +60,35 @@ Rectangle {
         anchors.rightMargin: 32
         anchors.topMargin: 224
         spacing: 32
+
+        // 即時機台狀態總覽（跟著 MES 輪詢更新）
         Notification {
-            title: "3 active equipment alarms · Demo"
-            message: "Select a marked device in the 3D factory to inspect its alarm."
-            severity: 3
-            sizeState: 2
-            iconState: 2
             width: notificationBox.notificationWidth
-        }
-
-        Notification {
-            title: SharedData.equipmentAlarms[0].title
-            message: SharedData.equipmentAlarms[0].message
-            severity: 4
-            sizeState: 2
-            iconState: 3
-        }
-
-        Notification {
-            title: "Line 01: Shift Quota Met"
-            message: "The planned quota for the concluding shift has been met."
-            severity: 1
-            sizeState: 1
-            iconState: 1
-        }
-        Notification {
-            title: "Machinery malfunction SP-L15"
-            message: "Machinery malfunction detected and device taken ofline. Operation ceased, and technical support investigating."
-            severity: 2
-            sizeState: 2
-        }
-
-        Notification {
-            title: SharedData.equipmentAlarms[1].title
-            message: SharedData.equipmentAlarms[1].message
-            severity: 3
-            sizeState: 1
-            iconState: 2
-        }
-
-        Notification {
-            title: "Restricted Access Cleared"
-            message: "This is to inform you that the person who entered the restricted area has now left."
-            severity: 1
-            sizeState: 1
-            iconState: 1
-        }
-
-        Notification {
-            title: SharedData.equipmentAlarms[2].title
-            message: SharedData.equipmentAlarms[2].message
-            severity: 3
+            title: SharedData.activeAlarmCount > 0
+                   ? (SharedData.activeAlarmCount + " 項設備異常 · 即時機台狀態")
+                   : "全部機台運行正常 · 即時機台狀態"
+            message: "點 3D 設備或下方項目查看機台即時狀態（每 5 秒更新）。"
+            severity: SharedData.activeAlarmCount > 0 ? 3 : 1
             sizeState: 2
             iconState: 2
         }
 
-        Notification {
-            title: "Planned Maintenance Activity"
-            message: "Personel detected in a restricted area that is dangerous and not safe for human presence. Please inform any on-site personal of this issue."
-            severity: 0
-        }
-
-        Notification {
-            severity: 0
-        }
-
-        Notification {
-            severity: 0
+        // 每台對應機台一筆。model 綁「固定不變」的 machineStateMap，delegate 只建一次、不重建；
+        // 內容讀即時 equipmentAlarms[index]（每次輪詢自動更新）。
+        // 這樣避免 equipmentAlarms 每秒整包重設、導致 Repeater 重建 delegate 觸發
+        // QQmlDelegateModel 的 objectRef>0 斷言崩潰（debug build）。
+        Repeater {
+            model: SharedData.machineStateMap
+            Notification {
+                width: notificationBox.notificationWidth
+                readonly property var info: SharedData.equipmentAlarms[index]
+                title: info ? ((info.machineName ? info.machineName : info.equipment)
+                              + "（" + info.equipment + "） · " + info.stateText) : ""
+                message: info ? info.message : ""
+                severity: info ? (info.severity === 4 ? 4 : (info.severity === 3 ? 3 : 1)) : 0
+                sizeState: 2
+                iconState: (info && info.severity === 4) ? 3 : 2
+            }
         }
     }
 }

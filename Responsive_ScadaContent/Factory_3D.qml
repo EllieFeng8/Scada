@@ -90,14 +90,36 @@ Rectangle {
     property bool themeToggle: master.__daymode
     property real resetbuttonPos: 1010
     property string selectedAlarmState: ""
+    property real popupX: 0   // 浮窗位置：貼著點擊的 icon/位置（factory 座標）
+    property real popupY: 0
     readonly property var selectedAlarm: SharedData.alarmForState(selectedAlarmState)
+    // 點任何對應機台（含綠燈運行中）都顯示中央狀態面板，非機台標籤回 null。
+    readonly property var selectedMachine: SharedData.machineInfoForState(selectedAlarmState)
+    readonly property color selectedMachineColor: selectedMachine
+            ? (selectedMachine.severity === 4 ? "#ff4154"
+               : selectedMachine.severity === 3 ? "#f3af3d" : "#23b26a")
+            : "#23b26a"
     readonly property bool alarmDetailsVisible: equipmentAlarmPanel.visible
+
+    // 3D 模型依即時狀態上色：綠(運行)/黃(待機)/紅(異常或斷線)。讀 equipmentAlarms → binding 每次輪詢自動更新。
+    function statusColor(stateName) {
+        var info = SharedData.machineInfoForState(stateName)
+        var s = info ? info.severity : 2
+        return s === 4 ? "#ff4154" : (s === 3 ? "#f3af3d" : "#23b26a")
+    }
+    function statusEmissive(stateName) {
+        var info = SharedData.machineInfoForState(stateName)
+        var s = info ? info.severity : 2
+        if (s === 4) return Qt.vector3d(0.25, 0.02, 0.03)   // 紅光
+        if (s === 3) return Qt.vector3d(0.15, 0.08, 0.01)   // 黃光
+        return Qt.vector3d(0.02, 0.18, 0.07)                // 綠光
+    }
 
     function focusEquipment(stateName) {
         resetCameraAnimation.stop()
         startCameraAnim.stop()
         factory.state = stateName
-        selectedAlarmState = SharedData.alarmForState(stateName) ? stateName : ""
+        selectedAlarmState = SharedData.machineInfoForState(stateName) ? stateName : ""
     }
 
     onStateChanged: {
@@ -212,6 +234,38 @@ Rectangle {
                 id: warningEquipmentMaterial
                 baseColor: "#f3af3d"
                 emissiveFactor: Qt.vector3d(0.15, 0.08, 0.01)
+                roughness: 0.45
+            }
+
+            // 即時狀態材質：各設備站一個，顏色/發光隨 MES 狀態變（綠/黃/紅）。
+            PrincipledMaterial {
+                id: statusMatLine1Printers
+                baseColor: factory.statusColor("Line1Printers_state")
+                emissiveFactor: factory.statusEmissive("Line1Printers_state")
+                roughness: 0.45
+            }
+            PrincipledMaterial {
+                id: statusMatLine2Mill
+                baseColor: factory.statusColor("line2Mill")
+                emissiveFactor: factory.statusEmissive("line2Mill")
+                roughness: 0.45
+            }
+            PrincipledMaterial {
+                id: statusMatLine3Soldering
+                baseColor: factory.statusColor("Line 3 Soldering")
+                emissiveFactor: factory.statusEmissive("Line 3 Soldering")
+                roughness: 0.45
+            }
+            PrincipledMaterial {
+                id: statusMatMainWelding
+                baseColor: factory.statusColor("MainLineWelding")
+                emissiveFactor: factory.statusEmissive("MainLineWelding")
+                roughness: 0.45
+            }
+            PrincipledMaterial {
+                id: statusMatLine4Welding
+                baseColor: factory.statusColor("Line4Welding")
+                emissiveFactor: factory.statusEmissive("Line4Welding")
                 roughness: 0.45
             }
 
@@ -1554,7 +1608,7 @@ Rectangle {
                 y: 0
                 visible: true
                 z: 576.14032
-                weldingBasicMaterial: warningEquipmentMaterial
+                weldingBasicMaterial: statusMatLine4Welding
                 weldingBeltMaterial: belt
             }
 
@@ -1580,7 +1634,7 @@ Rectangle {
                 y: -0
                 visible: true
                 z: 675
-                elecQABasicMaterial: basicWhite
+                elecQABasicMaterial: statusMatLine3Soldering
                 isPaused: !isRunning
             }
 
@@ -1605,7 +1659,7 @@ Rectangle {
                 y: -0
                 visible: true
                 z: 1085.83594
-                millBasicMaterial: warningEquipmentMaterial
+                millBasicMaterial: statusMatLine2Mill
                 isPaused: !isRunning
             }
 
@@ -1678,7 +1732,7 @@ Rectangle {
                 y: -0
                 visible: true
                 z: 1125.91711
-                printerBasicWhite: criticalEquipmentMaterial
+                printerBasicWhite: statusMatLine1Printers
             }
 
             Node {
@@ -2101,7 +2155,7 @@ Rectangle {
                 eulerRotation.x: -0.00002
                 //distances: distanceLOD
                 //camera: sceneCamera
-                printerBasicWhite:basicWhite
+                printerBasicWhite: statusMatLine1Printers
 
             }
 
@@ -2120,7 +2174,7 @@ Rectangle {
                 eulerRotation.x: -0.00002
                 //distances: distanceLOD
                 //camera: sceneCamera
-                printerBasicWhite:basicWhite
+                printerBasicWhite: statusMatLine1Printers
             }
 
             MyContainderLOD {
@@ -2236,7 +2290,7 @@ Rectangle {
                 eulerRotation.y: 90
                 z: 0
                 weldingBeltMaterial: belt
-                weldingBasicMaterial: basicWhite
+                weldingBasicMaterial: statusMatMainWelding
                 //fadeDistance: 200
                 //distances: distanceLOD
                 //camera: sceneCamera
@@ -3865,7 +3919,7 @@ Rectangle {
         onClicked: (mouse) => {
             var hit = view3D.pick(mouse.x, mouse.y)
             var stateName = factory.equipmentState(hit.objectHit)
-            if (stateName) factory.focusEquipment(stateName)
+            if (stateName) { factory.popupX = mouse.x + 12; factory.popupY = mouse.y + 12; factory.focusEquipment(stateName) }
             else factory.selectedAlarmState = ""
         }
         onWheel: (wheel) => {
@@ -3876,56 +3930,59 @@ Rectangle {
     Rectangle {
         id: equipmentAlarmPanel
         objectName: "equipmentAlarmPanel"
-        parent: root
+        parent: factory
         z: 100
-        visible: views.activeView === 2 && factory.selectedAlarm !== null && !header.notifications
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.rightMargin: 24
-        anchors.topMargin: Math.min(170, parent.height * 0.22)
-        width: Math.min(440, parent.width - 48)
-        height: Math.min(alarmContent.implicitHeight + 40, parent.height - y - 24)
-        radius: 16
+        visible: views.activeView === 2 && factory.selectedMachine !== null && !header.notifications
+        // 貼著點擊的 icon/位置顯示的小浮窗，夾在畫面內不超出；不刷深背景。
+        width: 340
+        height: Math.min(alarmContent.implicitHeight + 36, factory.height - 24)
+        x: Math.max(12, Math.min(factory.popupX, factory.width - width - 12))
+        y: Math.max(12, Math.min(factory.popupY, factory.height - height - 12))
+        radius: 12
         color: master.__panelBackground_C
         border.width: 2
-        border.color: factory.selectedAlarm && factory.selectedAlarm.severity === 4 ? "#ff4154" : "#f3af3d"
+        border.color: factory.selectedMachineColor
 
         MouseArea { anchors.fill: parent; onWheel: (wheel) => { wheel.accepted = true } }
         ScrollView {
             anchors.fill: parent
-            anchors.margins: 20
+            anchors.margins: 18
             contentWidth: availableWidth
             clip: true
             Column {
                 id: alarmContent
                 width: parent.width
-                spacing: 16
+                spacing: 12
                 Text {
                     width: parent.width
-                    text: factory.selectedAlarm && factory.selectedAlarm.severity === 4 ? "● 嚴重異常 · 示範告警" : "● 警告 · 示範告警"
+                    text: {
+                        if (!factory.selectedMachine) return ""
+                        var s = factory.selectedMachine.severity
+                        return (s === 4 ? "● 嚴重異常" : s === 3 ? "● 警告" : "● 運行中") + " · 即時機台狀態"
+                    }
                     color: equipmentAlarmPanel.border.color
-                    font.pixelSize: 18
+                    font.pixelSize: 15
                     font.bold: true
                     wrapMode: Text.WordWrap
                 }
                 Text {
                     width: parent.width
-                    text: factory.selectedAlarm ? factory.selectedAlarm.equipment : ""
+                    text: factory.selectedMachine ? factory.selectedMachine.equipment : ""
                     color: master.__font_C
-                    font.pixelSize: 24
+                    font.pixelSize: 22
                     font.bold: true
                     wrapMode: Text.WordWrap
                 }
                 Text {
                     width: parent.width
-                    text: factory.selectedAlarm ? factory.selectedAlarm.title : ""
+                    text: factory.selectedMachine ? factory.selectedMachine.title : ""
                     color: master.__font_C
                     font.pixelSize: 20
                     wrapMode: Text.WordWrap
                 }
                 Text {
                     width: parent.width
-                    text: factory.selectedAlarm ? factory.selectedAlarm.message : ""
+                    text: factory.selectedMachine ? factory.selectedMachine.message : ""
                     color: master.__font_C
                     font.pixelSize: 17
                     lineHeight: 1.25

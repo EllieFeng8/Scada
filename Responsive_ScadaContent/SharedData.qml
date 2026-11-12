@@ -15,42 +15,67 @@ QtObject {
     property list<int> environment: [DataModel.environmentValue, DataModel.environmentValueChange, DataModel.environmentSlider]
     property bool connected: DataModel.connected
 
-    // 機台 state 名稱 ↔ MES 機台 的對應。只接現有 3D 物件，不新增機台。
-    // stage: "head" 打頭機 / "thread" 搓牙機；machineId 為 MES 機台 id。
-    // 要換成別台機台，改這裡的 machineId / stage 即可。
+    // 站點 stateName ↔ MES 機台 的對應。所有可點擊站點全接上人機。
+    // stage: "head" 打頭機(A01-A14=id1-14) / "thread" 搓牙機(T01-T11=id1-11)。
+    // 預設照 3D 場景順序：前 14 站→A01~A14，後 10 站→T01~T10。要換對應改這裡的 stage/machineId 即可。
     readonly property var machineStateMap: [
-        { stateName: "Line1Printers_state", equipment: "Line 1 Printers", stage: "head", machineId: 1 },
-        { stateName: "line2Mill",           equipment: "Line 2 Mill",     stage: "head", machineId: 4 },
-        { stateName: "Line4Welding",        equipment: "Line 4 Welding",  stage: "head", machineId: 9 }
+        { stateName: "Line1CamState",        equipment: "Line 1",           stage: "head",   machineId: 3 },
+        { stateName: "Line1QA_state",        equipment: "Line 1 QA",        stage: "head",   machineId: 2 },
+        { stateName: "Line1Printers_state",  equipment: "Line 1 Printers",  stage: "head",   machineId: 1 },
+        { stateName: "line1endZoom",         equipment: "Line 1 End",       stage: "head",   machineId: 7 },
+        { stateName: "line2View",            equipment: "Line 2",           stage: "head",   machineId: 5 },
+        { stateName: "Discardpile1",         equipment: "Discard 1",        stage: "head",   machineId: 6 },
+        { stateName: "line2Mill",            equipment: "Line 2 Mill",      stage: "head",   machineId: 4 },
+        { stateName: "line2QA",              equipment: "Line 2 QA",        stage: "thread", machineId: 6 },
+        { stateName: "Line 2 Container",     equipment: "Line 2 Container", stage: "head",   machineId: 9 },
+        { stateName: "Line 2 End",           equipment: "Line 2 End",       stage: "head",   machineId: 10 },
+        { stateName: "discardPile2",         equipment: "Discard 2",        stage: "head",   machineId: 11 },
+        { stateName: "Line3",                equipment: "Line 3",           stage: "head",   machineId: 12 },
+        { stateName: "Line 3 Soldering",     equipment: "Line 3 Soldering", stage: "thread", machineId: 9 },
+        { stateName: "line3EQA",             equipment: "Line 3 e-QA",      stage: "head",   machineId: 14 },
+        { stateName: "Line3Container",       equipment: "Line 3 Container", stage: "thread", machineId: 1 },
+        { stateName: "Line3Arms",            equipment: "Line 3 Arms",      stage: "thread", machineId: 2 },
+        { stateName: "MainLineWelding",      equipment: "Welding",          stage: "thread", machineId: 10 },
+        { stateName: "Line4",                equipment: "Line 4",           stage: "thread", machineId: 4 },
+        { stateName: "Line4Containers",      equipment: "Line 4 Containers",stage: "thread", machineId: 5 },
+        { stateName: "Line4Welding",         equipment: "Line 4 Welding",   stage: "head",   machineId: 8 },
+        { stateName: "Line4End",             equipment: "Line 4 End",       stage: "thread", machineId: 7 },
+        { stateName: "MainLineQA",           equipment: "Main QA",          stage: "thread", machineId: 8 },
+        { stateName: "MainLineArms",         equipment: "Main Arms",        stage: "head",   machineId: 13 },
+        { stateName: "MainLineEnd",          equipment: "Main End",         stage: "thread", machineId: 3 }
     ]
 
     // 由 MES 即時狀態填入；初始為「連線中」(視為正常，避免誤報)。每次輪詢整包重設。
     property var equipmentAlarms: machineStateMap.map(function(m) {
         return { equipment: m.equipment, stateName: m.stateName, machineId: m.machineId,
-                 stage: m.stage, state: -1, severity: 2,
+                 stage: m.stage, state: -1, severity: 2, stateText: "連線中",
+                 machineName: "", currentQuantity: 0, targetQuantity: 0, productionStatus: "",
                  title: m.equipment + " · 連線中…", message: "尚未取得機台即時狀態。" }
     })
 
     // MES state：0 斷線 / 1 異常紅燈 / 2 運行綠燈 / 3 待機黃燈。
     // severity 對應現有 3D 著色：4=紅、3=黃、2=綠(視為無告警)。
-    function stateMeta(equipment, state) {
+    function stateMeta(state) {
         switch (state) {
-        case 1:  return { severity: 4, title: equipment + " · 異常", message: "機台異常紅燈，請派員檢查處理。" }
-        case 0:  return { severity: 4, title: equipment + " · 斷線", message: "機台離線（斷線），未取得即時狀態。" }
-        case 3:  return { severity: 3, title: equipment + " · 待機", message: "機台待機中（黃燈）。" }
-        case 2:  return { severity: 2, title: equipment + " · 運行中", message: "機台自動運行中（綠燈）。" }
-        default: return { severity: 2, title: equipment + " · 無資料", message: "查無機台即時狀態資料。" }
+        case 1:  return { severity: 4, stateText: "異常" }
+        case 0:  return { severity: 4, stateText: "斷線" }
+        case 3:  return { severity: 3, stateText: "待機" }
+        case 2:  return { severity: 2, stateText: "運行中" }
+        default: return { severity: 2, stateText: "無資料" }
         }
+    }
+
+    // 查某 stateName 對應機台的完整即時資訊（名稱/產量/狀態）；非對應機台回 null。
+    function machineInfoForState(stateName) {
+        for (var i = 0; i < equipmentAlarms.length; ++i)
+            if (equipmentAlarms[i].stateName === stateName) return equipmentAlarms[i]
+        return null
     }
 
     // 只有異常(黃/紅)才回傳告警物件；運行綠燈回傳 null → 3D 顯示綠色。
     function alarmForState(stateName) {
-        for (var i = 0; i < equipmentAlarms.length; ++i) {
-            var a = equipmentAlarms[i]
-            if (a.stateName === stateName)
-                return a.severity >= 3 ? a : null
-        }
-        return null
+        var a = machineInfoForState(stateName)
+        return (a && a.severity >= 3) ? a : null
     }
 
     // 目前異常(黃/紅)機台數，給告警列數字用。
@@ -120,69 +145,117 @@ QtObject {
         onTriggered: shareddata.refreshAssignment()
     }
 
-    // ── 即時機台狀態輪詢（MES REST，每 5 秒）────────────────────────
+    // ── 即時機台狀態輪詢（MES REST，每 5 秒）：批次抓取，撐得住多台 ──────
+    // 每輪只打 4 支整包 API（歷程/派工 各 head+thread），client 端分組，與機台數無關。
     property bool machinePollBusy: false
-    function machineEndpoint(stage, machineId) {
+    property var machineNameCache: ({})   // key "stage:id" -> 機台名稱
+    property bool machineNamesLoaded: false
+
+    function getJson(url, cb) {
+        var xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            if (xhr.status === 200) { try { cb(JSON.parse(xhr.responseText)) } catch (e) { cb(null) } }
+            else cb(null)
+        }
+        xhr.open("GET", url); xhr.setRequestHeader("Accept", "application/json"); xhr.send()
+    }
+    // 整包歷程 → { machineId: 最新 state }
+    function latestStateByMachine(rows) {
+        var out = {}, tmap = {}
+        if (!Array.isArray(rows)) return out
+        for (var k = 0; k < rows.length; ++k) {
+            var r = rows[k]; var id = r.machineId
+            if (id === undefined || id === null) continue
+            var t = Date.parse(r.time); if (isNaN(t)) t = k
+            if (!(id in tmap) || t >= tmap[id]) {
+                tmap[id] = t
+                out[id] = (typeof r.state === "number") ? r.state : -1
+            }
+        }
+        return out
+    }
+    // 整包派工 → { machineId: 進行中(未結單)最新派工 }
+    function openAssignmentByMachine(rows) {
+        var out = {}, tmap = {}
+        if (!Array.isArray(rows)) return out
+        for (var k = 0; k < rows.length; ++k) {
+            var r = rows[k]; var id = r.machineId
+            if (id === undefined || id === null) continue
+            if (!(r.orderClosed === 0 || r.orderClosed === null)) continue
+            var t = Date.parse(r.startedAt); if (isNaN(t)) t = k
+            if (!(id in tmap) || t >= tmap[id]) { tmap[id] = t; out[id] = r }
+        }
+        return out
+    }
+    function loadMachineNames(done) {
         var b = workOrderBaseUrl.replace(/\/+$/, "")
-        if (stage === "thread")
-            return b + "/threadMachineHistoryLog/getThreadMachineHistoryLogByMachine?machineId=" + machineId
-        return b + "/headMachineHistoryLog/getHeadMachineHistoryLogByMachine?machineId=" + machineId
+        var pending = 2
+        function one() { if (--pending === 0) { shareddata.machineNamesLoaded = true; done() } }
+        getJson(b + "/headMachine/getMachines", function(list) {
+            if (Array.isArray(list)) for (var i = 0; i < list.length; ++i)
+                shareddata.machineNameCache["head:" + list[i].id] = list[i].headMachineName || ""
+            one()
+        })
+        getJson(b + "/threadMachine/getMachines", function(list) {
+            if (Array.isArray(list)) for (var i = 0; i < list.length; ++i)
+                shareddata.machineNameCache["thread:" + list[i].id] = list[i].threadRollingMachineName || ""
+            one()
+        })
+    }
+    function assembleMachineStates(headState, threadState, headWO, threadWO) {
+        var map = machineStateMap
+        var out = []
+        for (var i = 0; i < map.length; ++i) {
+            var m = map[i]
+            var st = (m.stage === "thread" ? threadState : headState)[m.machineId]
+            if (st === undefined) st = -1
+            var wo = (m.stage === "thread" ? threadWO : headWO)[m.machineId]
+            var meta = shareddata.stateMeta(st)
+            var name = shareddata.machineNameCache[m.stage + ":" + m.machineId] || ""
+            var cur = wo ? (wo.currentQuantity || 0) : 0
+            var tgt = wo ? (wo.targetQuantity || 0) : 0
+            var ps  = wo ? (wo.productionStatus || "") : ""
+            var nm = name || ("#" + m.machineId)
+            var q = tgt > 0 ? ("產量 " + Math.round(cur) + " / " + Math.round(tgt))
+                            : (cur > 0 ? ("產量 " + Math.round(cur)) : "產量 —")
+            out.push({ equipment: m.equipment, stateName: m.stateName, machineId: m.machineId,
+                       stage: m.stage, state: st, severity: meta.severity, stateText: meta.stateText,
+                       machineName: name, currentQuantity: cur, targetQuantity: tgt, productionStatus: ps,
+                       title: nm + " · " + meta.stateText,
+                       message: (ps ? ("工序：" + ps + " · ") : "") + q })
+        }
+        shareddata.equipmentAlarms = out
+    }
+    function doPoll() {
+        var b = workOrderBaseUrl.replace(/\/+$/, "")
+        var headState = null, threadState = null, headWO = null, threadWO = null
+        var pending = 4
+        function one() {
+            if (--pending > 0) return
+            machineStateTimeout.stop()
+            shareddata.machinePollBusy = false
+            shareddata.assembleMachineStates(headState || {}, threadState || {}, headWO || {}, threadWO || {})
+        }
+        getJson(b + "/headMachineHistoryLog/getHeadMachineHistoryLog", function(d){ headState = shareddata.latestStateByMachine(d); one() })
+        getJson(b + "/threadMachineHistoryLog/getThreadMachineHistoryLog", function(d){ threadState = shareddata.latestStateByMachine(d); one() })
+        getJson(b + "/workOrderHeadingMachine/getWorkOrderHeadingMachine", function(d){ headWO = shareddata.openAssignmentByMachine(d); one() })
+        getJson(b + "/workOrderThreadingMachine/getWorkOrderThreadingMachine", function(d){ threadWO = shareddata.openAssignmentByMachine(d); one() })
     }
     function refreshMachineStates() {
         if (machinePollBusy) return
         machinePollBusy = true
         machineStateTimeout.restart()
-        var map = machineStateMap
-        var results = new Array(map.length)
-        var remaining = map.length
-        function done() {
-            if (--remaining > 0) return
-            machineStateTimeout.stop()
-            machinePollBusy = false
-            var out = []
-            for (var j = 0; j < map.length; ++j) out.push(results[j])
-            shareddata.equipmentAlarms = out
-        }
-        for (var i = 0; i < map.length; ++i) {
-            (function(idx) {
-                var m = map[idx]
-                var xhr = new XMLHttpRequest()
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState !== XMLHttpRequest.DONE) return
-                    var state = -1
-                    if (xhr.status === 200) {
-                        try {
-                            var rows = JSON.parse(xhr.responseText)
-                            if (Array.isArray(rows) && rows.length > 0) {
-                                var latest = null, latestT = -Infinity
-                                for (var k = 0; k < rows.length; ++k) {
-                                    var t = Date.parse(rows[k].time)
-                                    if (isNaN(t)) t = k
-                                    if (t >= latestT) { latestT = t; latest = rows[k] }
-                                }
-                                if (latest && typeof latest.state === "number") state = latest.state
-                            }
-                        } catch (e) { state = -1 }
-                    }
-                    var meta = shareddata.stateMeta(m.equipment, state)
-                    results[idx] = { equipment: m.equipment, stateName: m.stateName,
-                                     machineId: m.machineId, stage: m.stage, state: state,
-                                     severity: meta.severity, title: meta.title, message: meta.message }
-                    done()
-                }
-                xhr.open("GET", shareddata.machineEndpoint(m.stage, m.machineId))
-                xhr.setRequestHeader("Accept", "application/json")
-                xhr.send()
-            })(i)
-        }
+        if (!machineNamesLoaded) shareddata.loadMachineNames(function(){ shareddata.doPoll() })
+        else shareddata.doPoll()
     }
     property Timer machineStateTimeout: Timer {
-        interval: 8000
+        interval: 12000
         running: false
         onTriggered: shareddata.machinePollBusy = false   // 防止請求卡住導致不再輪詢
     }
     property Timer machineStateRefresh: Timer {
-        interval: 5000
+        interval: 1000   // 每 1 秒輪詢一次
         running: true
         repeat: true
         triggeredOnStart: true

@@ -9,6 +9,15 @@ Item {
     readonly property var alarm: SharedData.alarmForState(stateName)
     readonly property bool hasAlarm: alarm !== null
     readonly property color statusColor: hasAlarm ? (alarm.severity === 4 ? "#ff4154" : "#f3af3d") : "#23b26a"
+    // 對應 MES 機台時：顯示人機名稱 + 即時產量（非機台站點 mesInfo 為 null，維持原本行為）
+    readonly property var mesInfo: SharedData.machineInfoForState(stateName)
+    readonly property string displayName: (mesInfo && mesInfo.machineName) ? mesInfo.machineName : name
+    readonly property string detailText: {
+        if (!mesInfo) return ""
+        if (mesInfo.targetQuantity > 0) return "產量 " + Math.round(mesInfo.currentQuantity) + "/" + Math.round(mesInfo.targetQuantity)
+        if (mesInfo.currentQuantity > 0) return "產量 " + Math.round(mesInfo.currentQuantity)
+        return ""
+    }
     property vector3d trackedWorldPosition: line1Pos.scenePosition
     property int visiblityDistance: 5000
     property bool maximized: false
@@ -96,7 +105,12 @@ Item {
         height: 34
         color: master.__font_C
         //color: "black"
-        text: clickableTitle.hasAlarm ? parent.name + (clickableTitle.alarm.severity === 4 ? " · 嚴重" : " · 警告") : parent.name
+        text: {
+            var s = clickableTitle.displayName
+            if (clickableTitle.detailText !== "") s += "  ·  " + clickableTitle.detailText
+            if (clickableTitle.hasAlarm) s += (clickableTitle.alarm.severity === 4 ? "  ·  嚴重" : "  ·  警告")
+            return s
+        }
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         font.family: "Hubot-Sans SemiBold"
@@ -120,7 +134,12 @@ Item {
         hoverEnabled: true
         enabled: clickableTitle.opacity
         cursorShape: Qt.PointingHandCursor
-        onClicked: factory.focusEquipment(clickableTitle.stateName)
+        onClicked: {
+            // 浮窗顯示在這個 icon/標籤旁邊
+            factory.popupX = clickableTitle.x
+            factory.popupY = clickableTitle.y + clickableTitle.height + 8
+            factory.focusEquipment(clickableTitle.stateName)
+        }
         onEntered:clickableTitle.z+=3
         onExited: clickableTitle.z-=3
     }
@@ -170,7 +189,7 @@ Item {
 
             PropertyChanges {
                 target: mouseArea
-                enabled: false
+                enabled: true   // 縮成 icon 時仍可點擊，點 icon 也會飛到目標
             }
 
             PropertyChanges {
